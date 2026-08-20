@@ -89,3 +89,37 @@ button:hover {
 .cell.path {
     background-color: #facc15;
 }
+.statistics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(110px, 150px));
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.statistics div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: white;
+}
+
+.statistics span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.statistics strong {
+    color: #172033;
+    font-size: 16px;
+}
+
+@media (max-width: 650px) {
+    .statistics {
+        grid-template-columns: repeat(2, minmax(110px, 150px));
+    }
+}

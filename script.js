@@ -3,23 +3,20 @@ const runBfsButton = document.getElementById("run-bfs-button");
 const runDfsButton = document.getElementById("run-dfs-button");
 const clearButton = document.getElementById("clear-button");
 
+const algorithmStat = document.getElementById("algorithm-stat");
+const visitedStat = document.getElementById("visited-stat");
+const pathStat = document.getElementById("path-stat");
+const timeStat = document.getElementById("time-stat");
+
 const numberOfRows = 15;
 const numberOfColumns = 20;
 
-const startPosition = {
-    row: 7,
-    column: 3
-};
-
-const endPosition = {
-    row: 7,
-    column: 16
-};
+const startPosition = { row: 7, column: 3 };
+const endPosition = { row: 7, column: 16 };
 
 let isRunning = false;
 
 
-// Create the grid
 function createGrid() {
     gridElement.innerHTML = "";
 
@@ -51,10 +48,11 @@ function createGrid() {
             gridElement.appendChild(cell);
         }
     }
+
+    resetStatistics();
 }
 
 
-// Add or remove walls
 function handleCellClick(event) {
     if (isRunning) {
         return;
@@ -73,7 +71,6 @@ function handleCellClick(event) {
 }
 
 
-// Find a cell by its coordinates
 function getCell(row, column) {
     return document.querySelector(
         `[data-row="${row}"][data-column="${column}"]`
@@ -81,13 +78,11 @@ function getCell(row, column) {
 }
 
 
-// Create a unique string for a position
 function createPositionKey(row, column) {
     return `${row},${column}`;
 }
 
 
-// Pause during an animation
 function sleep(milliseconds) {
     return new Promise(resolve => {
         setTimeout(resolve, milliseconds);
@@ -95,7 +90,6 @@ function sleep(milliseconds) {
 }
 
 
-// Remove previous search colors
 function clearSearchColors() {
     const cells = document.querySelectorAll(".cell");
 
@@ -106,32 +100,72 @@ function clearSearchColors() {
 }
 
 
-// Color one visited cell
-async function showVisitedCell(position) {
-    const cell = getCell(position.row, position.column);
-
-    if (
-        !cell.classList.contains("start") &&
-        !cell.classList.contains("end")
-    ) {
-        cell.classList.add("visited");
-        await sleep(25);
-    }
+function resetStatistics() {
+    algorithmStat.textContent = "—";
+    visitedStat.textContent = "0";
+    pathStat.textContent = "0";
+    timeStat.textContent = "0 ms";
 }
 
 
-// Run Breadth-First Search
-async function runBFS() {
-    if (isRunning) {
-        return;
+function updateStatistics(
+    algorithm,
+    visitedCells,
+    pathLength,
+    executionTime
+) {
+    algorithmStat.textContent = algorithm;
+    visitedStat.textContent = visitedCells;
+    pathStat.textContent = pathLength;
+    timeStat.textContent = `${executionTime.toFixed(3)} ms`;
+}
+
+
+function getNeighbors(current) {
+    const directions = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1]
+    ];
+
+    const neighbors = [];
+
+    for (const [rowChange, columnChange] of directions) {
+        const nextRow = current.row + rowChange;
+        const nextColumn = current.column + columnChange;
+
+        const isInsideGrid =
+            nextRow >= 0 &&
+            nextRow < numberOfRows &&
+            nextColumn >= 0 &&
+            nextColumn < numberOfColumns;
+
+        if (!isInsideGrid) {
+            continue;
+        }
+
+        const cell = getCell(nextRow, nextColumn);
+
+        if (cell.classList.contains("wall")) {
+            continue;
+        }
+
+        neighbors.push({
+            row: nextRow,
+            column: nextColumn
+        });
     }
 
-    isRunning = true;
-    clearSearchColors();
+    return neighbors;
+}
 
+
+function calculateBFS() {
     const queue = [startPosition];
     const visited = new Set();
     const parents = new Map();
+    const visitedOrder = [];
 
     const startKey = createPositionKey(
         startPosition.row,
@@ -140,20 +174,13 @@ async function runBFS() {
 
     visited.add(startKey);
 
-    const directions = [
-        [-1, 0], // Up
-        [1, 0],  // Down
-        [0, -1], // Left
-        [0, 1]   // Right
-    ];
-
+    const startTime = performance.now();
     let foundDestination = false;
 
     while (queue.length > 0) {
-        // BFS removes the first item
         const current = queue.shift();
 
-        await showVisitedCell(current);
+        visitedOrder.push(current);
 
         if (
             current.row === endPosition.row &&
@@ -163,72 +190,46 @@ async function runBFS() {
             break;
         }
 
-        for (const [rowChange, columnChange] of directions) {
-            const nextRow = current.row + rowChange;
-            const nextColumn = current.column + columnChange;
+        const neighbors = getNeighbors(current);
 
-            const isInsideGrid =
-                nextRow >= 0 &&
-                nextRow < numberOfRows &&
-                nextColumn >= 0 &&
-                nextColumn < numberOfColumns;
-
-            if (!isInsideGrid) {
-                continue;
-            }
-
-            const nextCell = getCell(nextRow, nextColumn);
-            const nextKey = createPositionKey(
-                nextRow,
-                nextColumn
+        for (const neighbor of neighbors) {
+            const neighborKey = createPositionKey(
+                neighbor.row,
+                neighbor.column
             );
 
-            if (nextCell.classList.contains("wall")) {
+            if (visited.has(neighborKey)) {
                 continue;
             }
 
-            if (visited.has(nextKey)) {
-                continue;
-            }
-
-            visited.add(nextKey);
+            visited.add(neighborKey);
 
             const currentKey = createPositionKey(
                 current.row,
                 current.column
             );
 
-            parents.set(nextKey, currentKey);
-
-            queue.push({
-                row: nextRow,
-                column: nextColumn
-            });
+            parents.set(neighborKey, currentKey);
+            queue.push(neighbor);
         }
     }
 
-    if (foundDestination) {
-        await showPath(parents);
-    } else {
-        alert("No path was found!");
-    }
+    const executionTime = performance.now() - startTime;
 
-    isRunning = false;
+    return {
+        foundDestination,
+        parents,
+        visitedOrder,
+        executionTime
+    };
 }
 
 
-// Run Depth-First Search
-async function runDFS() {
-    if (isRunning) {
-        return;
-    }
-
-    isRunning = true;
-    clearSearchColors();
-
+function calculateDFS() {
     const stack = [startPosition];
     const visited = new Set();
     const parents = new Map();
+    const visitedOrder = [];
 
     const startKey = createPositionKey(
         startPosition.row,
@@ -237,20 +238,13 @@ async function runDFS() {
 
     visited.add(startKey);
 
-    const directions = [
-        [0, 1],  // Right
-        [0, -1], // Left
-        [1, 0],  // Down
-        [-1, 0]  // Up
-    ];
-
+    const startTime = performance.now();
     let foundDestination = false;
 
     while (stack.length > 0) {
-        // DFS removes the last item
         const current = stack.pop();
 
-        await showVisitedCell(current);
+        visitedOrder.push(current);
 
         if (
             current.row === endPosition.row &&
@@ -260,62 +254,57 @@ async function runDFS() {
             break;
         }
 
-        for (const [rowChange, columnChange] of directions) {
-            const nextRow = current.row + rowChange;
-            const nextColumn = current.column + columnChange;
+        const neighbors = getNeighbors(current);
 
-            const isInsideGrid =
-                nextRow >= 0 &&
-                nextRow < numberOfRows &&
-                nextColumn >= 0 &&
-                nextColumn < numberOfColumns;
-
-            if (!isInsideGrid) {
-                continue;
-            }
-
-            const nextCell = getCell(nextRow, nextColumn);
-            const nextKey = createPositionKey(
-                nextRow,
-                nextColumn
+        for (const neighbor of neighbors) {
+            const neighborKey = createPositionKey(
+                neighbor.row,
+                neighbor.column
             );
 
-            if (nextCell.classList.contains("wall")) {
+            if (visited.has(neighborKey)) {
                 continue;
             }
 
-            if (visited.has(nextKey)) {
-                continue;
-            }
-
-            visited.add(nextKey);
+            visited.add(neighborKey);
 
             const currentKey = createPositionKey(
                 current.row,
                 current.column
             );
 
-            parents.set(nextKey, currentKey);
-
-            stack.push({
-                row: nextRow,
-                column: nextColumn
-            });
+            parents.set(neighborKey, currentKey);
+            stack.push(neighbor);
         }
     }
 
-    if (foundDestination) {
-        await showPath(parents);
-    } else {
-        alert("No path was found!");
-    }
+    const executionTime = performance.now() - startTime;
 
-    isRunning = false;
+    return {
+        foundDestination,
+        parents,
+        visitedOrder,
+        executionTime
+    };
 }
 
 
-// Reconstruct and display the discovered path
-async function showPath(parents) {
+async function animateVisitedCells(visitedOrder) {
+    for (const position of visitedOrder) {
+        const cell = getCell(position.row, position.column);
+
+        if (
+            !cell.classList.contains("start") &&
+            !cell.classList.contains("end")
+        ) {
+            cell.classList.add("visited");
+            await sleep(25);
+        }
+    }
+}
+
+
+function reconstructPath(parents) {
     const startKey = createPositionKey(
         startPosition.row,
         startPosition.column
@@ -328,15 +317,18 @@ async function showPath(parents) {
 
     const path = [];
 
-    // Follow the parent cells backward from E to S
     while (currentKey !== startKey) {
         path.push(currentKey);
         currentKey = parents.get(currentKey);
     }
 
-    // Display the path from S toward E
     path.reverse();
 
+    return path;
+}
+
+
+async function animatePath(path) {
     for (const key of path) {
         const [row, column] = key.split(",").map(Number);
         const cell = getCell(row, column);
@@ -354,9 +346,52 @@ async function showPath(parents) {
 }
 
 
-// Connect the buttons
-runBfsButton.addEventListener("click", runBFS);
-runDfsButton.addEventListener("click", runDFS);
+async function runAlgorithm(algorithmName) {
+    if (isRunning) {
+        return;
+    }
+
+    isRunning = true;
+    clearSearchColors();
+    resetStatistics();
+
+    const result =
+        algorithmName === "BFS"
+            ? calculateBFS()
+            : calculateDFS();
+
+    await animateVisitedCells(result.visitedOrder);
+
+    let pathLength = 0;
+
+    if (result.foundDestination) {
+        const path = reconstructPath(result.parents);
+
+        pathLength = path.length;
+
+        await animatePath(path);
+    } else {
+        alert("No path was found!");
+    }
+
+    updateStatistics(
+        algorithmName,
+        result.visitedOrder.length,
+        pathLength,
+        result.executionTime
+    );
+
+    isRunning = false;
+}
+
+
+runBfsButton.addEventListener("click", () => {
+    runAlgorithm("BFS");
+});
+
+runDfsButton.addEventListener("click", () => {
+    runAlgorithm("DFS");
+});
 
 clearButton.addEventListener("click", () => {
     if (!isRunning) {
@@ -365,5 +400,4 @@ clearButton.addEventListener("click", () => {
 });
 
 
-// Create the grid when the page loads
 createGrid();
