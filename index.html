@@ -15,13 +15,44 @@
     </header>
 
     <main>
-      <section class="controls">
-        <button id="run-bfs-button">Run BFS</button>
-        <button id="run-dfs-button">Run DFS</button>
-        <button id="clear-button">Clear Grid</button>
-      </section>
+      <main>
+        <section class="controls">
+          <button id="run-bfs-button">Run BFS</button>
+          <button id="run-dfs-button">Run DFS</button>
+          <button id="run-dijkstra-button">Run Dijkstra</button>
+          <button id="draw-mode-button">Mode: Walls</button>
+          <button id="clear-button">Clear Grid</button>
+        </section>
 
-      <section id="grid"></section>
+        <section class="statistics">
+          <div>
+            <span>Algorithm</span>
+            <strong id="algorithm-stat">—</strong>
+          </div>
+
+          <div>
+            <span>Visited cells</span>
+            <strong id="visited-stat">0</strong>
+          </div>
+
+          <div>
+            <span>Path length</span>
+            <strong id="path-stat">0</strong>
+          </div>
+
+          <div>
+            <span>Path cost</span>
+            <strong id="cost-stat">0</strong>
+          </div>
+
+          <div>
+            <span>Execution time</span>
+            <strong id="time-stat">0 ms</strong>
+          </div>
+        </section>
+
+        <section id="grid"></section>
+      </main>
     </main>
 
     <script src="script.js"></script>

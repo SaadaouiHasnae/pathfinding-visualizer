@@ -1,11 +1,18 @@
 const gridElement = document.getElementById("grid");
+
 const runBfsButton = document.getElementById("run-bfs-button");
 const runDfsButton = document.getElementById("run-dfs-button");
+const runDijkstraButton = document.getElementById(
+    "run-dijkstra-button"
+);
+
+const drawModeButton = document.getElementById("draw-mode-button");
 const clearButton = document.getElementById("clear-button");
 
 const algorithmStat = document.getElementById("algorithm-stat");
 const visitedStat = document.getElementById("visited-stat");
 const pathStat = document.getElementById("path-stat");
+const costStat = document.getElementById("cost-stat");
 const timeStat = document.getElementById("time-stat");
 
 const numberOfRows = 15;
@@ -15,6 +22,7 @@ const startPosition = { row: 7, column: 3 };
 const endPosition = { row: 7, column: 16 };
 
 let isRunning = false;
+let drawMode = "wall";
 
 
 function createGrid() {
@@ -58,16 +66,39 @@ function handleCellClick(event) {
         return;
     }
 
-    const clickedCell = event.target;
+    const cell = event.target;
 
     if (
-        clickedCell.classList.contains("start") ||
-        clickedCell.classList.contains("end")
+        cell.classList.contains("start") ||
+        cell.classList.contains("end")
     ) {
         return;
     }
 
-    clickedCell.classList.toggle("wall");
+    if (drawMode === "wall") {
+        cell.classList.remove("weight");
+        cell.classList.toggle("wall");
+    } else {
+        cell.classList.remove("wall");
+        cell.classList.toggle("weight");
+    }
+}
+
+
+function toggleDrawMode() {
+    if (isRunning) {
+        return;
+    }
+
+    if (drawMode === "wall") {
+        drawMode = "weight";
+        drawModeButton.textContent = "Mode: Weights";
+        drawModeButton.classList.add("weight-mode");
+    } else {
+        drawMode = "wall";
+        drawModeButton.textContent = "Mode: Walls";
+        drawModeButton.classList.remove("weight-mode");
+    }
 }
 
 
@@ -80,6 +111,17 @@ function getCell(row, column) {
 
 function createPositionKey(row, column) {
     return `${row},${column}`;
+}
+
+
+function getCellCost(row, column) {
+    const cell = getCell(row, column);
+
+    if (cell.classList.contains("weight")) {
+        return 5;
+    }
+
+    return 1;
 }
 
 
@@ -104,6 +146,7 @@ function resetStatistics() {
     algorithmStat.textContent = "—";
     visitedStat.textContent = "0";
     pathStat.textContent = "0";
+    costStat.textContent = "0";
     timeStat.textContent = "0 ms";
 }
 
@@ -112,11 +155,13 @@ function updateStatistics(
     algorithm,
     visitedCells,
     pathLength,
+    pathCost,
     executionTime
 ) {
     algorithmStat.textContent = algorithm;
     visitedStat.textContent = visitedCells;
     pathStat.textContent = pathLength;
+    costStat.textContent = pathCost;
     timeStat.textContent = `${executionTime.toFixed(3)} ms`;
 }
 
@@ -132,29 +177,26 @@ function getNeighbors(current) {
     const neighbors = [];
 
     for (const [rowChange, columnChange] of directions) {
-        const nextRow = current.row + rowChange;
-        const nextColumn = current.column + columnChange;
+        const row = current.row + rowChange;
+        const column = current.column + columnChange;
 
         const isInsideGrid =
-            nextRow >= 0 &&
-            nextRow < numberOfRows &&
-            nextColumn >= 0 &&
-            nextColumn < numberOfColumns;
+            row >= 0 &&
+            row < numberOfRows &&
+            column >= 0 &&
+            column < numberOfColumns;
 
         if (!isInsideGrid) {
             continue;
         }
 
-        const cell = getCell(nextRow, nextColumn);
+        const cell = getCell(row, column);
 
         if (cell.classList.contains("wall")) {
             continue;
         }
 
-        neighbors.push({
-            row: nextRow,
-            column: nextColumn
-        });
+        neighbors.push({ row, column });
     }
 
     return neighbors;
@@ -190,9 +232,7 @@ function calculateBFS() {
             break;
         }
 
-        const neighbors = getNeighbors(current);
-
-        for (const neighbor of neighbors) {
+        for (const neighbor of getNeighbors(current)) {
             const neighborKey = createPositionKey(
                 neighbor.row,
                 neighbor.column
@@ -214,13 +254,11 @@ function calculateBFS() {
         }
     }
 
-    const executionTime = performance.now() - startTime;
-
     return {
         foundDestination,
         parents,
         visitedOrder,
-        executionTime
+        executionTime: performance.now() - startTime
     };
 }
 
@@ -254,9 +292,7 @@ function calculateDFS() {
             break;
         }
 
-        const neighbors = getNeighbors(current);
-
-        for (const neighbor of neighbors) {
+        for (const neighbor of getNeighbors(current)) {
             const neighborKey = createPositionKey(
                 neighbor.row,
                 neighbor.column
@@ -278,13 +314,105 @@ function calculateDFS() {
         }
     }
 
-    const executionTime = performance.now() - startTime;
+    return {
+        foundDestination,
+        parents,
+        visitedOrder,
+        executionTime: performance.now() - startTime
+    };
+}
+
+
+function calculateDijkstra() {
+    const priorityQueue = [
+        {
+            row: startPosition.row,
+            column: startPosition.column,
+            distance: 0
+        }
+    ];
+
+    const distances = new Map();
+    const parents = new Map();
+    const visited = new Set();
+    const visitedOrder = [];
+
+    const startKey = createPositionKey(
+        startPosition.row,
+        startPosition.column
+    );
+
+    distances.set(startKey, 0);
+
+    const startTime = performance.now();
+    let foundDestination = false;
+
+    while (priorityQueue.length > 0) {
+        priorityQueue.sort((a, b) => {
+            return a.distance - b.distance;
+        });
+
+        const current = priorityQueue.shift();
+
+        const currentKey = createPositionKey(
+            current.row,
+            current.column
+        );
+
+        if (visited.has(currentKey)) {
+            continue;
+        }
+
+        visited.add(currentKey);
+        visitedOrder.push(current);
+
+        if (
+            current.row === endPosition.row &&
+            current.column === endPosition.column
+        ) {
+            foundDestination = true;
+            break;
+        }
+
+        for (const neighbor of getNeighbors(current)) {
+            const neighborKey = createPositionKey(
+                neighbor.row,
+                neighbor.column
+            );
+
+            if (visited.has(neighborKey)) {
+                continue;
+            }
+
+            const movementCost = getCellCost(
+                neighbor.row,
+                neighbor.column
+            );
+
+            const newDistance =
+                current.distance + movementCost;
+
+            const oldDistance =
+                distances.get(neighborKey) ?? Infinity;
+
+            if (newDistance < oldDistance) {
+                distances.set(neighborKey, newDistance);
+                parents.set(neighborKey, currentKey);
+
+                priorityQueue.push({
+                    row: neighbor.row,
+                    column: neighbor.column,
+                    distance: newDistance
+                });
+            }
+        }
+    }
 
     return {
         foundDestination,
         parents,
         visitedOrder,
-        executionTime
+        executionTime: performance.now() - startTime
     };
 }
 
@@ -328,6 +456,18 @@ function reconstructPath(parents) {
 }
 
 
+function calculatePathCost(path) {
+    let totalCost = 0;
+
+    for (const key of path) {
+        const [row, column] = key.split(",").map(Number);
+        totalCost += getCellCost(row, column);
+    }
+
+    return totalCost;
+}
+
+
 async function animatePath(path) {
     for (const key of path) {
         const [row, column] = key.split(",").map(Number);
@@ -355,19 +495,26 @@ async function runAlgorithm(algorithmName) {
     clearSearchColors();
     resetStatistics();
 
-    const result =
-        algorithmName === "BFS"
-            ? calculateBFS()
-            : calculateDFS();
+    let result;
+
+    if (algorithmName === "BFS") {
+        result = calculateBFS();
+    } else if (algorithmName === "DFS") {
+        result = calculateDFS();
+    } else {
+        result = calculateDijkstra();
+    }
 
     await animateVisitedCells(result.visitedOrder);
 
     let pathLength = 0;
+    let pathCost = 0;
 
     if (result.foundDestination) {
         const path = reconstructPath(result.parents);
 
         pathLength = path.length;
+        pathCost = calculatePathCost(path);
 
         await animatePath(path);
     } else {
@@ -378,6 +525,7 @@ async function runAlgorithm(algorithmName) {
         algorithmName,
         result.visitedOrder.length,
         pathLength,
+        pathCost,
         result.executionTime
     );
 
@@ -392,6 +540,12 @@ runBfsButton.addEventListener("click", () => {
 runDfsButton.addEventListener("click", () => {
     runAlgorithm("DFS");
 });
+
+runDijkstraButton.addEventListener("click", () => {
+    runAlgorithm("Dijkstra");
+});
+
+drawModeButton.addEventListener("click", toggleDrawMode);
 
 clearButton.addEventListener("click", () => {
     if (!isRunning) {

@@ -91,7 +91,7 @@ button:hover {
 }
 .statistics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(110px, 150px));
+    grid-template-columns: repeat(5, minmax(110px, 150px));
     justify-content: center;
     gap: 12px;
     margin-bottom: 20px;
@@ -122,4 +122,26 @@ button:hover {
     .statistics {
         grid-template-columns: repeat(2, minmax(110px, 150px));
     }
+}
+.cell.weight {
+    background-color: #c084fc;
+    color: white;
+}
+
+.cell.weight::after {
+    content: "5";
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#draw-mode-button.weight-mode {
+    background-color: #9333ea;
+}
+.cell.weight.visited {
+    background-color: #60a5fa;
+}
+
+.cell.weight.path {
+    background-color: #facc15;
+    color: #172033;
 }
