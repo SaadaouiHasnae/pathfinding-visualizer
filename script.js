@@ -5,6 +5,9 @@ const runDfsButton = document.getElementById("run-dfs-button");
 const runDijkstraButton = document.getElementById(
     "run-dijkstra-button"
 );
+const runAstarButton = document.getElementById(
+    "run-astar-button"
+);
 
 const drawModeButton = document.getElementById("draw-mode-button");
 const clearButton = document.getElementById("clear-button");
@@ -322,6 +325,12 @@ function calculateDFS() {
     };
 }
 
+function calculateHeuristic(row, column) {
+    return (
+        Math.abs(row - endPosition.row) +
+        Math.abs(column - endPosition.column)
+    );
+}
 
 function calculateDijkstra() {
     const priorityQueue = [
@@ -416,6 +425,107 @@ function calculateDijkstra() {
     };
 }
 
+function calculateAStar() {
+    const priorityQueue = [
+        {
+            row: startPosition.row,
+            column: startPosition.column,
+            cost: 0,
+            priority: calculateHeuristic(
+                startPosition.row,
+                startPosition.column
+            )
+        }
+    ];
+
+    const costs = new Map();
+    const parents = new Map();
+    const visited = new Set();
+    const visitedOrder = [];
+
+    const startKey = createPositionKey(
+        startPosition.row,
+        startPosition.column
+    );
+
+    costs.set(startKey, 0);
+
+    const startTime = performance.now();
+    let foundDestination = false;
+
+    while (priorityQueue.length > 0) {
+        priorityQueue.sort((a, b) => {
+            return a.priority - b.priority;
+        });
+
+        const current = priorityQueue.shift();
+
+        const currentKey = createPositionKey(
+            current.row,
+            current.column
+        );
+
+        if (visited.has(currentKey)) {
+            continue;
+        }
+
+        visited.add(currentKey);
+        visitedOrder.push(current);
+
+        if (
+            current.row === endPosition.row &&
+            current.column === endPosition.column
+        ) {
+            foundDestination = true;
+            break;
+        }
+
+        for (const neighbor of getNeighbors(current)) {
+            const neighborKey = createPositionKey(
+                neighbor.row,
+                neighbor.column
+            );
+
+            if (visited.has(neighborKey)) {
+                continue;
+            }
+
+            const movementCost = getCellCost(
+                neighbor.row,
+                neighbor.column
+            );
+
+            const newCost = current.cost + movementCost;
+
+            const oldCost =
+                costs.get(neighborKey) ?? Infinity;
+
+            if (newCost < oldCost) {
+                costs.set(neighborKey, newCost);
+                parents.set(neighborKey, currentKey);
+
+                const heuristic = calculateHeuristic(
+                    neighbor.row,
+                    neighbor.column
+                );
+
+                priorityQueue.push({
+                    row: neighbor.row,
+                    column: neighbor.column,
+                    cost: newCost,
+                    priority: newCost + heuristic
+                });
+            }
+        }
+    }
+
+    return {
+        foundDestination,
+        parents,
+        visitedOrder,
+        executionTime: performance.now() - startTime
+    };
+}
 
 async function animateVisitedCells(visitedOrder) {
     for (const position of visitedOrder) {
@@ -498,12 +608,14 @@ async function runAlgorithm(algorithmName) {
     let result;
 
     if (algorithmName === "BFS") {
-        result = calculateBFS();
-    } else if (algorithmName === "DFS") {
-        result = calculateDFS();
-    } else {
-        result = calculateDijkstra();
-    }
+    result = calculateBFS();
+} else if (algorithmName === "DFS") {
+    result = calculateDFS();
+} else if (algorithmName === "Dijkstra") {
+    result = calculateDijkstra();
+} else {
+    result = calculateAStar();
+}
 
     await animateVisitedCells(result.visitedOrder);
 
@@ -545,6 +657,9 @@ runDijkstraButton.addEventListener("click", () => {
     runAlgorithm("Dijkstra");
 });
 
+runAstarButton.addEventListener("click", () => {
+    runAlgorithm("A*");
+});
 drawModeButton.addEventListener("click", toggleDrawMode);
 
 clearButton.addEventListener("click", () => {
