@@ -11,7 +11,10 @@ const runAstarButton = document.getElementById(
 
 const drawModeButton = document.getElementById("draw-mode-button");
 const clearButton = document.getElementById("clear-button");
-
+const speedSelect = document.getElementById("speed-select");
+const clearPathButton = document.getElementById(
+    "clear-path-button"
+);
 const algorithmStat = document.getElementById("algorithm-stat");
 const visitedStat = document.getElementById("visited-stat");
 const pathStat = document.getElementById("path-stat");
@@ -26,9 +29,11 @@ const endPosition = { row: 7, column: 16 };
 
 let isRunning = false;
 let drawMode = "wall";
+let movingNode = null;
 
 
 function createGrid() {
+    movingNode = null;
     gridElement.innerHTML = "";
 
     for (let row = 0; row < numberOfRows; row++) {
@@ -71,13 +76,34 @@ function handleCellClick(event) {
 
     const cell = event.target;
 
-    if (
-        cell.classList.contains("start") ||
-        cell.classList.contains("end")
-    ) {
+    // Place a previously selected node
+    if (movingNode !== null) {
+        if (
+            cell.classList.contains("start") ||
+            cell.classList.contains("end")
+        ) {
+            return;
+        }
+
+        moveNodeToCell(cell);
         return;
     }
 
+    // Select the start node
+    if (cell.classList.contains("start")) {
+        movingNode = "start";
+        cell.classList.add("selected-node");
+        return;
+    }
+
+    // Select the destination node
+    if (cell.classList.contains("end")) {
+        movingNode = "end";
+        cell.classList.add("selected-node");
+        return;
+    }
+
+    // Draw walls or weights
     if (drawMode === "wall") {
         cell.classList.remove("weight");
         cell.classList.toggle("wall");
@@ -87,6 +113,40 @@ function handleCellClick(event) {
     }
 }
 
+function moveNodeToCell(newCell) {
+    const position =
+        movingNode === "start"
+            ? startPosition
+            : endPosition;
+
+    const oldCell = getCell(
+        position.row,
+        position.column
+    );
+
+    oldCell.classList.remove(movingNode);
+    oldCell.classList.remove("selected-node");
+    oldCell.textContent = "";
+
+    newCell.classList.remove(
+        "wall",
+        "weight",
+        "visited",
+        "path"
+    );
+
+    position.row = Number(newCell.dataset.row);
+    position.column = Number(newCell.dataset.column);
+
+    newCell.classList.add(movingNode);
+    newCell.textContent =
+        movingNode === "start" ? "S" : "E";
+
+    movingNode = null;
+
+    clearSearchColors();
+    resetStatistics();
+}
 
 function toggleDrawMode() {
     if (isRunning) {
@@ -536,7 +596,7 @@ async function animateVisitedCells(visitedOrder) {
             !cell.classList.contains("end")
         ) {
             cell.classList.add("visited");
-            await sleep(25);
+            await sleep(Number(speedSelect.value));
         }
     }
 }
@@ -590,7 +650,7 @@ async function animatePath(path) {
             cell.classList.remove("visited");
             cell.classList.add("path");
 
-            await sleep(40);
+            await sleep(Number(speedSelect.value) + 15);
         }
     }
 }
@@ -661,6 +721,13 @@ runAstarButton.addEventListener("click", () => {
     runAlgorithm("A*");
 });
 drawModeButton.addEventListener("click", toggleDrawMode);
+
+clearPathButton.addEventListener("click", () => {
+    if (!isRunning) {
+        clearSearchColors();
+        resetStatistics();
+    }
+});
 
 clearButton.addEventListener("click", () => {
     if (!isRunning) {

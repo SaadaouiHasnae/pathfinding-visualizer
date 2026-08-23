@@ -145,3 +145,41 @@ button:hover {
     background-color: #facc15;
     color: #172033;
 }
+
+.secondary-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.secondary-controls label {
+    font-weight: bold;
+}
+
+#speed-select {
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: white;
+    color: #172033;
+}
+
+#clear-path-button {
+    background-color: #64748b;
+}
+
+#clear-path-button:hover {
+    background-color: #475569;
+}
+
+.cell.start,
+.cell.end {
+    cursor: pointer;
+}
+
+.cell.selected-node {
+    outline: 3px solid #f59e0b;
+    outline-offset: -3px;
+}
